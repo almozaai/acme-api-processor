@@ -1,0 +1,139 @@
+<html>
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"></script>
+  </head>
+  <body>
+    <h1>Week-7 Weekend Project</h1>
+    <div class="max-min"></div>
+    <script>
+      const loadData = async() => {
+        const urls = [
+          'https://acme-users-api-rev.herokuapp.com/api/companies',
+          'https://acme-users-api-rev.herokuapp.com/api/products',
+          'https://acme-users-api-rev.herokuapp.com/api/offerings'
+        ];
+        const responses = await Promise.all(urls.map(url => axios.get(url)));
+        const [companies, products, offerings] = responses.map(response =>response.data);
+        console.log(offerings)
+        console.log(companies)
+        console.log(products)
+
+        //return products within a price range
+        const productsInPriceRange = findProductsInPriceRange(products, {max: 15, min: 1})
+        console.log(productsInPriceRange)
+
+        //returns object where key is first letter of company name
+        //value for each key is the array of those companies
+        const groupedCompaniesByLetter = groupCompaniesByLetter(companies);
+        console.log(groupedCompaniesByLetter)
+
+        //return object where key is a state
+        //value for each key is the array of those companies in that state
+        const groupedCompaniesByState = groupCompaniesByState(companies);
+        console.log(groupedCompaniesByState)
+
+        //return an array of the offerings with each offering having a company and product
+        const processedOfferings = processOfferings({companies, products, offerings})
+        console.log(processedOfferings);
+
+        //return the companies that have n or more offerings
+        const threeOrMoreOfferings = companiesByNumberOfOfferings(companies, offerings, 3)
+        console.log(threeOrMoreOfferings)
+
+        //return array of products where each product has the average price of it's offerings
+        const processedProducts = processProducts({ products, offerings });
+        console.log(processedProducts)
+      }
+      loadData()
+      //return products within a price range
+      const findProductsInPriceRange = (products,{max, min}) =>{
+        const prices = products.map(price => price.suggestedPrice)
+        return prices.filter(price => price <= max && price >= min).sort(function(a, b){return a-b})
+      }
+
+      //returns object where key is first letter of company name
+      //value for each key is the array of those companies
+      //One cosirn I can't return the key with same letter so I return array include object for each company name
+      const groupCompaniesByLetter =(companies) => {
+         const companyArray = companies.map(company => company.name);
+         const companyName = companyArray.map(company => company.split(" "))
+         const comapnyNameArray = companyName.map(name => {
+           return name.filter(eachName => eachName.length > 1)
+         })
+         return comapnyNameArray.map(nameArr => {
+           return nameArr.reduce((acc, name) => {
+             acc[name[0]] = name.split('')
+             return acc
+           }, {})
+         })
+      };
+
+      //return object where key is a state
+      //value for each key is the array of those companies in that state
+      const groupCompaniesByState = (companies) => {
+        let states = companies.map(comapany => comapany.state).sort()
+        states = new Set(states)
+        states = Array.from(states)
+        return companies.reduce((acc,company) =>{
+            if(!acc[company.state]){
+              acc[company.state]=[]
+            }
+            if(states.includes(company.state)){
+              acc[company.state].push(company.name)
+            }
+            return acc
+          },{})
+      };
+      //return an array of the offerings with each offering having a company and product
+      const processOfferings = ({companies, products, offerings}) => {
+
+         return offerings.map((offering,index) => {
+          let obj = {}
+          companies.forEach(company => {
+            if(company.id == offering.companyId){
+              obj.id = offering.id
+              obj.price = offering.price
+              obj.company = company.name
+            }
+
+          })
+            products.forEach(product => {
+              if(product.id == offering.productId){
+                obj.name = product.name
+              }
+            })
+            console.log(obj)
+            return obj
+        })
+      };
+
+      //return the companies that have n or more offerings
+      const companiesByNumberOfOfferings = (companies, offerings, n) =>{
+        return companies.reduce((acc,company) => {
+          let offiringNum =offerings.filter(offering => offering.companyId === company.id)
+            if(offiringNum.length >= n){
+               acc.push(company.name)
+            }
+            return acc
+        }, [])
+      };
+
+      //return array of products where each product has the average price of it's offerings
+      const processProducts = ({ products, offerings }) =>{
+        return products.reduce((acc, product) => {
+                let count = 0
+                let sum = 0
+                offerings.forEach(offering => {
+                  if(product.id === offering.productId){
+                  sum += offering.price
+                  count ++
+                  }
+                  })
+                 acc[product.name] = sum/count
+                 return acc
+              }, {})
+      };
+
+    </script>
+  </body>
+</html>
